@@ -7,7 +7,9 @@ from kivy.uix.filechooser import FileChooserIconView
 from kivy.core.window import Window
 from PIL import Image as PILImage, ImageDraw
 from kivy.graphics.texture import Texture
-from kivy.graphics import Rectangle
+from io import BytesIO
+
+kivy.require('1.11.1')  # Make sure to use your specific Kivy version here.
 
 # Dummy function for face detection
 def DetectFaces(img):
@@ -29,11 +31,14 @@ class ImageBox(BoxLayout):
 
     def on_file_selected(self, instance, value):
         if value:
+            print("Value in file selected")
             filepath = value[0]
             self.display_image(filepath)
+        else:
+            print("No Value")
 
     def display_image(self, filepath):
-        pil_image = PILImage.open(filepath)
+        pil_image = PILImage.open(filepath).convert('RGBA')
         if self.side == 'left':
             self.detect_and_display_faces(pil_image)
         else:
@@ -46,14 +51,17 @@ class ImageBox(BoxLayout):
         draw = ImageDraw.Draw(pil_image)
         faces = DetectFaces(pil_image)
         for (x, y, w, h) in faces:
-            draw.rectangle([x, y, x + w, y + h], outline="red")
+            draw.rectangle([x, y, x + w, y + h], outline="red", width=3)
 
         self.update_image_display(pil_image)
 
     def update_image_display(self, pil_image):
-        data = pil_image.tobytes()
-        texture = Texture.create(size=pil_image.size, colorfmt='rgba')
-        texture.blit_buffer(data, colorfmt='rgba', bufferfmt='ubyte')
+        data = BytesIO()
+        pil_image.save(data, format='png')
+        data.seek(0)
+        size = pil_image.size
+        texture = Texture.create(size=size, colorfmt='rgba')
+        texture.blit_buffer(data.getvalue(), colorfmt='rgba', bufferfmt='ubyte')
         self.image_display.texture = texture
 
 class MyApp(App):
